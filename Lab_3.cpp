@@ -3,14 +3,30 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <ctime>
 
 const int MAX_LINE_SIZE = 10; // Константа по заданию, максимальная длинна строки
+
+int ctoi(char x)
+{
+    return x - 'a' + 1;
+}
+
+int strSum(char* str)
+{
+    int size = sizeof(str) - 1;
+    int sum = 0;
+    for (int i = 0; i < size; i++)
+    {
+        sum += ctoi(str[i]) * std::pow(26, size-i-1);
+    }
+    return sum;
+}
 
 int sequentialSearch(char** data, int dataSize, char* keyword)
 {
     for (int i = 0; i < dataSize; i++)
     {
-        //std::cout << "Слово: " << data[i] << " [ " << i << " ] | Сравниваемое: " << keyword << std::endl; // debug
         if (strcmp(keyword, data[i]) == 0)
             return i;
     }
@@ -19,34 +35,57 @@ int sequentialSearch(char** data, int dataSize, char* keyword)
 
 int binarySearch(char** data, int dataSize, char* keyword)
 {
-    int left = 0; // задаем левую и правую границы поиска
+    int left = 0;
     int right = dataSize - 1;
-    while (left <= right) // пока левая граница не "перескочит" правую
+    while (left <= right)
     {
-        int mid = (left + right) / 2; // ищем середину отрезка
-        if (strcmp(keyword,data[mid]) == 0) {  // если ключевое поле равно искомому
-            return mid;    // мы нашли требуемый элемент,
+        int mid = (left + right) / 2;
+        if (strcmp(keyword,data[mid]) == 0) {
+            return mid;
         }
-        if (strcmp(keyword,data[mid]) < 0)     // если искомое ключевое поле меньше найденной середины
-            right = mid - 1;  // смещаем правую границу, продолжим поиск в левой части
-        else                  // иначе
-            left = mid + 1;   // смещаем левую границу, продолжим поиск в правой части
+        if (strcmp(keyword, data[mid]) < 0)
+            right = mid - 1;
+        else
+            left = mid + 1;
     }
-    return -1; // Возвращает -1 если значение не найдено
+    return -1;
 }
 
-void sortCharArray(char** data, int dataSize)
+int interpolatingSearch(char** data, int dataSize, char* keyword)
 {
-    char* temp;
-    int top, seek;
-    for (top = 0; top < dataSize - 1; top++)
+    int left = 0;
+    int right = dataSize - 1;
+    while (left <= right)
     {
-        for (seek = top + 1; seek < dataSize; seek++)
+        int mid = left + ((strSum(keyword) - strSum(data[left])) *
+            (right - left)) / (strSum(data[right]) - strSum(data[left]));
+        if (strcmp(keyword, data[mid]) == 0) {
+            return mid;
+        }
+        if (strcmp(keyword, data[mid]) < 0)
+            right = mid - 1;
+        else
+            left = mid + 1;
+    }
+    return -1;
+}
+
+template<typename T>
+void selectionSort(T array[], const size_t size)
+{
+    for (size_t idx_i = 0; idx_i < size - 1; idx_i++)
+    {
+        size_t min_idx = idx_i;
+        for (size_t idx_j = idx_i + 1; idx_j < size; idx_j++)
         {
-            if (strcmp(data[top], data[seek]) > 0)
+            if (strcmp(array[idx_j], array[min_idx]) < 0)
             {
-                std::swap(data[top], data[seek]);
+                min_idx = idx_j;
             }
+        }
+        if (min_idx != idx_i)
+        {
+            std::swap(array[idx_i], array[min_idx]);
         }
     }
 }
@@ -61,16 +100,8 @@ void printCharArray(char** data, int dataSize)
 
 int main()
 {
-    // debug tupa
-    std::cout << strcmp((char*)"a", (char*)"b") << std::endl;
-    std::cout << strcmp((char*)"b", (char*)"a") << std::endl;
-    std::cout << strcmp((char*)"a", (char*)"a") << std::endl;
-    /* -------------------------------------------------------- */
-
     setlocale(LC_ALL, "Russian");
     int size;
-    char line[MAX_LINE_SIZE];
- 
     std::string filename;
     std::cout << "Расположение файла (вариант 4): ";
     std::cin >> filename;
@@ -81,22 +112,38 @@ int main()
         char **data = new char* [size];
         for (int i = 0; i < size; i++)
         {
+            char* line = new char[MAX_LINE_SIZE];
             in >> line;
             data[i] = line;
-            //std::cout << "Data: " << data[i] << " | Line: " << line << std::endl; // debug
         }
-
-        std::cout << "Считанный массив строк:\n";
-        printCharArray(data, size);
 
         char keyword[MAX_LINE_SIZE];
         std::cout << "Введите ключевое слово для поиска: ";
         std::cin >> keyword;
 
-        std::cout << "Индекс найденного элемента последовательным поиском: " << sequentialSearch(data, size, keyword) << std::endl;
+        int findet_index;
 
-        sortCharArray(data, size); // Сортируем массив перед двоичным поиском
-        std::cout << "Индекс найденного элемента двоичным поиском: " << binarySearch(data, size, keyword) << std::endl;
+        double start = clock();
+        findet_index = sequentialSearch(data, size, keyword);
+        printf("%.4lf\n", (clock() - start) / CLOCKS_PER_SEC);
+
+        std::cout << "Индекс найденного элемента последовательным поиском: " << findet_index << std::endl;
+
+        start = clock();
+        selectionSort(data, size); // Сортируем массив перед двоичным и интерполирующим поиском
+        printf("%.4lf\n", (clock() - start) / CLOCKS_PER_SEC);
+
+        start = clock();
+        findet_index = binarySearch(data, size, keyword);
+        printf("%.4lf\n", (clock() - start) / CLOCKS_PER_SEC);
+
+        std::cout << "Индекс найденного элемента двоичным поиском: " << findet_index << std::endl;
+
+        start = clock();
+        findet_index = interpolatingSearch(data, size, keyword);
+        printf("%.4lf\n", (clock() - start) / CLOCKS_PER_SEC);
+
+        std::cout << "Индекс найденного элемента интерполирующим поиском: " << findet_index << std::endl;
     }
     else
     {
